@@ -88,52 +88,12 @@ function fileHash(buffer) {
 
 // ─── Image extraction via Puppeteer + Cheerio ───────────────────────────────
 
-function getChromePath() {
-  // On Render, use the cache directory defined in .puppeteerrc.cjs
-  const puppeteerCacheDir = process.env.PUPPETEER_EXECUTABLE_PATH;
-  if (puppeteerCacheDir) return puppeteerCacheDir;
-
-  const path = require('path');
-  const fs = require('fs');
-
-  // Try the configured cache dir (PUPPETEER_CACHE_DIR or local .cache/puppeteer)
-  const localCache = process.env.PUPPETEER_CACHE_DIR || path.join(__dirname, '.cache', 'puppeteer');
-  if (fs.existsSync(localCache)) {
-    // Walk to find the chrome executable
-    const chromeDirs = ['chrome', 'chrome-headless-shell'];
-    for (const dir of chromeDirs) {
-      const base = path.join(localCache, dir);
-      if (!fs.existsSync(base)) continue;
-      // Find any platform subfolder
-      const platforms = fs.readdirSync(base);
-      for (const platform of platforms) {
-        const candidates = [
-          path.join(base, platform, 'chrome-linux64', 'chrome'),
-          path.join(base, platform, 'chrome-linux', 'chrome'),
-          path.join(base, platform, 'chrome'),
-        ];
-        for (const c of candidates) {
-          if (fs.existsSync(c)) return c;
-        }
-      }
-    }
-  }
-
-  return null; // Let puppeteer auto-detect
-}
-
 async function extractImages(targetUrl, jobDir, onProgress) {
-  const launchOptions = {
+  const browser = await puppeteer.launch({
     headless: 'new',
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage',
-           '--disable-gpu', '--no-first-run', '--no-zygote', '--single-process',
-           '--disable-extensions'],
-  };
-
-  const chromePath = getChromePath();
-  if (chromePath) launchOptions.executablePath = chromePath;
-
-  const browser = await puppeteer.launch(launchOptions);
+           '--disable-gpu', '--no-first-run', '--no-zygote']
+  });
 
   let page;
   try {
